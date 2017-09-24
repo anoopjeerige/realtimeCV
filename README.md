@@ -1,2 +1,2 @@
 # realtimeCV
-Realtime object recognition from video with Google's TTS API
+Realtime cats and dogs recognition including data augmentation techniques
