@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Object Detection</title>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}"/>
+  <script type="text/javascript" src="{{ url_for('static', filename='script.js')}}"></script>
+</head>
+
+<body>
+  {% from "_formhelpers.html" import render_field %}
+  <h1>Recognition and Classification</h1>
+  <h2>Objects and Sounds</h2>
+
+  <p>Click on the x button in the top right corner to close the current tab:</p>
+
+  <div class="tab">
+    <button class="tablinks" onclick="openAct(event, 'image')" id="defaultOpen">Image</button>
+    <button class="tablinks" onclick="openAct(event, 'video')">Video</button>
+    <button class="tablinks" onclick="openAct(event, 'realtime')">Realtime</button>
+    <button class="tablinks" onclick="openAct(event, 'voicerec')">Voice</button>
+  </div>
+
+  <div id="image" class="tabcontent">
+    <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+    <h3>Image - Object Detection</h3>
+    <p>Detection of objects in the given image.</p>
+    <h3>Upload a color photo file.</h3>
+    <div>
+      <form id="upload" method=post action={{ url_for('imgproc') }} enctype="multipart/form-data">
+        {{ render_field(photo_form.input_photo) }}
+        <p><input type="button" onclick="WaitDisplay('upload');" value="Upload"></p>
+      </form>
+    </div>
+    <hr>
+
+  <div id="result">
+    {% if result|length > 0 %}
+      <div id="label">original</div>
+      <div><img id="photo" src="{{ result['original'] }}" align="left" hspace="10" vspace="10"></div>
+      <p>
+        <a href="javascript:void(0);" onclick="ChangePhoto('original', '{{ result['original'] }}');">original</a>
+        </br>
+        {% for name, img in result.items() %}
+          {% if name != 'original' %}
+            <a href="javascript:void(0);"
+               onclick="ChangePhoto('{{ name }}', '{{ result[ name ] }}');">{{ name }}</a>
+            </br>
+          {% endif %}
+        {% endfor %}
+      </p>
+    {% endif %}
+  </div>
+  <div id="loading" style="display:none">
+    <h2>Detecting Objects...</h2>
+  </div>
+  </div>
+
+  <div id="video" class="tabcontent">
+    <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+    <h3>Video - Object Detection</h3>
+    <p>Detection and classfication of objects in the given video source.</p>
+    <h3>Upload a video file.</h3>
+    <div>
+      <form id="vidupload" method=post action={{ url_for('vidproc') }} enctype="multipart/form-data">
+        {{ render_field(video_form.input_video) }}
+        <p><input type="button" onclick="WaitDisplay('vidupload');" value="Upload"></p>
+      </form>
+    </div>
+    <hr>
+    <!--<img src="{{ url_for('vidproc') }}">-->
+  </div>
+
+  <div id="realtime" class="tabcontent">
+    <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+    <h3>Realtime - Object Detection</h3>
+    <p>Detection and classification of objects in the given realtime video feed.</p>
+  </div>
+
+  <div id="voicerec" class="tabcontent">
+    <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+    <h3>Voice Recognition - Classification</h3>
+    <p>Recognition and classfication of voice for give audio sample.</p>
+  </div>
+
+</body>
+
+</html>
