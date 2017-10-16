@@ -2,8 +2,8 @@ body {font-family: "Lato", sans-serif;}
 
 /* Style the tab */
 div.tab {
-    overflow: hidden;
-    border: 1px solid #ccc;
+    overflow: auto;
+    border: 2px solid #ccc;
     background-color: #f1f1f1;
 }
 

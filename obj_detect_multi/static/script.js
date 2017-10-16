@@ -15,6 +15,14 @@ function openAct(evt, actName) {
 // Get the element with id="defaultOpen" and click on it
 document.getElementById("defaultOpen").click();
 
+function d_load() {
+  document.getElementById("imgOpen").click();
+}
+
+function b_nav() {
+  window.history.back();
+}
+
 function ChangePhoto(name, img) {
   img = typeof img !== 'undefined' ? img : "{{ result['original'] }}";
   target = document.getElementById("label");

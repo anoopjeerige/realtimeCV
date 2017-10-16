@@ -207,10 +207,6 @@ def vidpros():
     def generate(image_tensor, boxes, scores, classes, num_detections):
         ret, frame = vid_source.read()
         # tensor code
-
-
-
-        print(ret)
         while(ret):
             #image_np = client._load_image_into_numpy_array(frame)
             image_np_expanded = np.expand_dims(frame, axis=0)
