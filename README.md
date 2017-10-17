@@ -1,8 +1,8 @@
 # Recognition and Classification System
 
 ## References
--https://github.com/GoogleCloudPlatform/tensorflow-object-detection-example
--https://github.com/datitran/object_detector_app
+- https://github.com/GoogleCloudPlatform/tensorflow-object-detection-example
+- https://github.com/datitran/object_detector_app
 
 ## Language
 - Python 3.5.2
@@ -52,7 +52,7 @@
 ## Running the application
 
 ```
-# git clone https://github.com/PhillipLy/realtimeCV.git
+# git clone https://github.com/anoopjeerige/realtimeCV
 # cd ~/realtimeCV/obj_detect_multi
 # export FLASK_APP=detector.app
 # flask run
@@ -61,12 +61,16 @@ You have to wait around 60secs for the application to finish loading
  the pretrained model graph. You'll see the message
  `Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)` when it's ready.
 
-Now you can access the instance's static IP address using a web browser.
+Now you can access the instance's IP address using a web browser.
  When you upload an image file with a `jpeg`, `jpg`, or `png` extension,
  the application shows the result of the object detection inference.
- The inference may take up to 30 seconds, depending on the image.
+ The inference may take up to 10 seconds, depending on the image.
 
 You can check the objects by clicking labels shown to the right of the image.
+
+You can upload an video file (preferably small < 5MB, .mp4, 3gp),
+ for the object detection inference. The Real-time detection take the web cam
+ as the source for the object detection.
 
 ## How to use different models
 There are five pretrained models that can be used by the application.
