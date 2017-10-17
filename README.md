@@ -1,8 +1,8 @@
 # Recognition and Classification System
 
 ## References
-- https://github.com/GoogleCloudPlatform/tensorflow-object-detection-example
-https://github.com/datitran/object_detector_app
+-https://github.com/GoogleCloudPlatform/tensorflow-object-detection-example
+-https://github.com/datitran/object_detector_app
 
 ## Language
 - Python 3.5.2
