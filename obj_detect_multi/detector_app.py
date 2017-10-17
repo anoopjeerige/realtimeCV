@@ -3,6 +3,12 @@ import base64
 import sys
 import tempfile
 import cv2
+import time
+import argparse
+import datetime
+import numpy as np
+from queue import Queue
+from threading import Thread
 
 MODEL_BASE = '/home/anoop/models/research'
 sys.path.append(MODEL_BASE)
@@ -27,6 +33,7 @@ from werkzeug.datastructures import CombinedMultiDict
 from wtforms import Form
 from wtforms import ValidationError
 from cv2 import imencode
+from app_utils import draw_boxes_and_labels
 app = Flask(__name__)
 
 
@@ -41,6 +48,85 @@ content_types = {'jpg': 'image/jpeg',
 extensions = sorted(content_types.keys())
 
 # Helper Functions
+class FPS:
+    def __init__(self):
+        # store the start time, end time, and total number of frames
+        # that were examined between the start and end intervals
+        self._start = None
+        self._end = None
+        self._numFrames = 0
+
+    def start(self):
+        # start the timer
+        self._start = datetime.datetime.now()
+        return self
+
+    def stop(self):
+        # stop the timer
+        self._end = datetime.datetime.now()
+
+    def update(self):
+        # increment the total number of frames examined during the
+        # start and end intervals
+        self._numFrames += 1
+
+    def elapsed(self):
+        # return the total number of seconds between the start and
+        # end interval
+        return (self._end - self._start).total_seconds()
+
+    def fps(self):
+        # compute the (approximate) frames per second
+        return self._numFrames / self.elapsed()
+
+class WebcamVideoStream:
+    def __init__(self, src, width, height):
+        # initialize the video camera stream and read the first frame
+        # from the stream
+        self.src = src
+        self.width = width
+        self.height = height
+        #self.stream = cv2.VideoCapture(src)
+        #self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        #self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        #(self.grabbed, self.frame) = self.stream.read()
+
+        # initialize the variable used to indicate if the thread should
+        # be stopped
+        self.stopped = False
+
+    def init(self):
+        self.stream = cv2.VideoCapture(self.src)
+        self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+        self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+        (self.grabbed, self.frame) = self.stream.read()
+
+    def start(self):
+        # start the thread to read frames from the video stream
+        self.camthread = Thread(target=self.update, args=())
+        self.camthread.start()
+        return self
+
+    def update(self):
+        # keep looping infinitely until the thread is stopped
+        while True:
+            # if the thread indicator variable is set, stop the thread
+            if self.stopped:
+                self.stream.release()
+                return
+
+            # otherwise, read the next frame from the stream
+            (self.grabbed, self.frame) = self.stream.read()
+
+    def read(self):
+        # return the frame most recently read
+        return self.frame
+
+    def stop(self):
+        # indicate that the thread should be stopped
+        self.stopped = True
+
+
 def is_image():
   def _is_image(form, field):
     if not field.data:
@@ -71,6 +157,50 @@ def encode_image(image):
   #imgstr = 'data:image/png;base64,{0!s}'.format(
       #base64.b64encode(image_buffer.getvalue()))
   return imgstr
+
+# Webcam feed Helper
+def worker(input_q, output_q):
+    detection_graph = client.detection_graph
+    sess = client.sess
+    fps = FPS().start()
+    while True:
+        fps.update()
+        frame = input_q.get()
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        output_q.put(detect_objects_webcam(frame_rgb, sess, detection_graph))
+
+    fps.stop()
+    sess.close()
+
+# detector for web camera
+def detect_objects_webcam(image_np, sess, detection_graph):
+    # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
+    image_np_expanded = np.expand_dims(image_np, axis=0)
+    image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
+
+    # Each box represents a part of the image where a particular object was detected.
+    boxes = detection_graph.get_tensor_by_name('detection_boxes:0')
+
+    # Each score represent how level of confidence for each of the objects.
+    # Score is shown on the result image, together with the class label.
+    scores = detection_graph.get_tensor_by_name('detection_scores:0')
+    classes = detection_graph.get_tensor_by_name('detection_classes:0')
+    num_detections = detection_graph.get_tensor_by_name('num_detections:0')
+
+    # Actual detection.
+    (boxes, scores, classes, num_detections) = sess.run(
+        [boxes, scores, classes, num_detections],
+        feed_dict={image_tensor: image_np_expanded})
+
+    # Visualization of the results of a detection.
+    rect_points, class_names, class_colors = draw_boxes_and_labels(
+        boxes=np.squeeze(boxes),
+        classes=np.squeeze(classes).astype(np.int32),
+        scores=np.squeeze(scores),
+        category_index=client.category_index,
+        min_score_thresh=.5
+    )
+    return dict(rect_points=rect_points, class_names=class_names, class_colors=class_colors)
 
 # Image class
 class PhotoForm(Form):
@@ -153,8 +283,6 @@ def detect_objects(image_path):
 
   return result
 
-
-
 @app.route('/')
 def main_display():
     photo_form = PhotoForm(request.form)
@@ -207,7 +335,7 @@ def vidpros():
     def generate(image_tensor, boxes, scores, classes, num_detections):
         ret, frame = vid_source.read()
         # tensor code
-        while(ret):
+        while ret:
             #image_np = client._load_image_into_numpy_array(frame)
             image_np_expanded = np.expand_dims(frame, axis=0)
 
@@ -235,7 +363,79 @@ def vidpros():
     return Response(generate(image_tensor, boxes, scores, classes, num_detections), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
+@app.route('/realproc', methods=['GET', 'POST'])
+def realproc():
+    return render_template('realtime.html')
+
+@app.route('/realstop', methods=['GET', 'POST'])
+def realstop():
+    photo_form = PhotoForm(request.form)
+    video_form = VideoForm(request.form)
+    if request.method == 'POST':
+        print("In - Stop - POST")
+        if request.form['realstop'] == 'Stop Web Cam':
+            print(request.form['realstop'])
+            fps_init.stop()
+            video_init.stop()
+            video_init.update()
+            print("Stopped")
+    return render_template('main.html', photo_form=photo_form, video_form=video_form)
+
+
+@app.route('/realpros')
+def realpros():
+    print("in real pros")
+    input_q = Queue(5)
+    output_q = Queue()
+    for i in range(1):
+        t = Thread(target=worker, args=(input_q, output_q))
+        t.daemon = True
+        t.start()
+
+    video_init.init()
+    video_capture = video_init.start()
+    fps = fps_init.start()
+    def generate():
+        print("in gen real pros")
+        frame = video_capture.read()
+        while video_capture.grabbed:
+            print("in while gen real pros")
+            input_q.put(frame)
+            t = time.time()
+
+            if output_q.empty():
+                pass
+            else:
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                data = output_q.get()
+                rec_points = data['rect_points']
+                class_names = data['class_names']
+                class_colors = data['class_colors']
+                for point, name, color in zip(rec_points, class_names, class_colors):
+                    cv2.rectangle(frame, (int(point['xmin'] * 480), int(point['ymin'] * 360)),
+                                  (int(point['xmax'] * 480), int(point['ymax'] * 360)), color, 3)
+                    cv2.rectangle(frame, (int(point['xmin'] * 480), int(point['ymin'] * 360)),
+                                  (int(point['xmin'] * 480) + len(name[0]) * 6,
+                                   int(point['ymin'] * 360) - 10), color, -1, cv2.LINE_AA)
+                    cv2.putText(frame, name[0], (int(point['xmin'] * 480), int(point['ymin'] * 360)), font,
+                                0.3, (0, 0, 0), 1)
+
+                payload = cv2.imencode('.jpg', frame)[1].tobytes()
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + payload + b'\r\n')
+                frame = video_capture.read()
+                #video_capture.update()
+            print("out of while")
+            fps.update()
+
+
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
 client = ObjectDetector()
+
+video_init = WebcamVideoStream(src=1, width=480, height=360)
+fps_init = FPS()
 
 app.secret_key = 'super secret key'
 app.config['SESSION_TYPE'] = 'filesystem'

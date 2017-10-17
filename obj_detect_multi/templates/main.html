@@ -81,11 +81,22 @@
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
         <h3>Realtime - Object Detection</h3>
         <p>Detection and classification of objects in the given realtime video feed.</p>
+        <div>
+          <form id="real" method=post action={{ url_for( 'realproc') }}>
+            <p><input type="button" name="realstop" onclick="WaitDisplay('real');" value="Start Web Cam" class="btn btn-primary"></p>
+          </form>
+        </div>
       </div>
       <div id="voicerec" class="tabcontent">
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
         <h3>Voice Recognition - Classification</h3>
         <p>Recognition and classfication of voice for give audio sample.</p>
+        <div>
+          <form id="rstop" method=post action={{ url_for( 'realstop') }}>
+            <p><input type="submit" name="realstop" onclick="WaitDisplay('rstop');" value="Start Web Cam" class="btn btn-primary"></p>
+            <p><input type="submit" name="realstop" onclick="WaitDisplay('rstop');" value="Stop Web Cam" class="btn btn-primary"></p>
+          </form>
+        </div>
       </div>
     </div>
     <div class="card-footer text-muted">
