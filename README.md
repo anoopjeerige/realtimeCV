@@ -1,5 +1,5 @@
-# Recognition and Classification System
-A web based implementation of the TensorFlow Object API to recognize and classify objects.
+# Detection and Classification System
+A web based implementation of the TensorFlow Object API to detect and classify objects.
 The inputs can be image, video or real-time web cam feed.
 The outputs include classified object using bounding boxes.
 
